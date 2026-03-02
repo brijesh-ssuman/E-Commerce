@@ -15,16 +15,20 @@ import { formatPrice, getPriceForCountry } from '../utils/pricing';
 const DeleteProduct = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { isGuestMode, selectedCountry } = useSelector(state => state.auth);
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(null);
   const [product, setProduct] = useState(null);
-  const { selectedCountry } = useSelector(state => state.auth);
 
   useEffect(() => {
+    if (isGuestMode) {
+      navigate('/admin/products', { state: { message: 'Guest mode: product modifications are disabled.' } });
+      return;
+    }
     fetchProduct();
-  }, [id]);
+  }, [id, isGuestMode, navigate]);
 
   const fetchProduct = async () => {
     try {

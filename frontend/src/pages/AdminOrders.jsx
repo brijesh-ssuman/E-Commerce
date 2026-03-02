@@ -10,7 +10,7 @@ import {
 const STATUS_OPTIONS = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
 
 const AdminOrders = () => {
-  const { user, selectedCountry } = useSelector(state => state.auth);
+  const { user, selectedCountry, isGuestMode } = useSelector(state => state.auth);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -21,6 +21,19 @@ const AdminOrders = () => {
   useEffect(() => {
     if (!user || !user.role || (user.role !== 'admin' && user.role !== 'superadmin')) {
       setError('Access denied: Admins only');
+      setLoading(false);
+      return;
+    }
+
+    if (isGuestMode) {
+      setOrders([{
+        _id: 'demo-order-1',
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        totalAmount: 0,
+        products: [{ name: 'Demo Product', quantity: 0, price: 0, productId: null }],
+        userId: { firstName: 'Demo', emailId: 'demo@example.com' }
+      }]);
       setLoading(false);
       return;
     }
@@ -38,11 +51,12 @@ const AdminOrders = () => {
     };
 
     fetchOrders();
-  }, [user]);
+  }, [user, isGuestMode]);
 
 
   // Update Single Order Status
   const updateStatus = async (orderId, status) => {
+    if (isGuestMode) return;
     try {
       await axiosClient.put(`/order/updateOrderStatus/${orderId}`, { status });
       setOrders(prev => prev.map(o => o._id === orderId ? { ...o, status } : o));
@@ -53,6 +67,7 @@ const AdminOrders = () => {
 
 
   const updateUserOrders = async (userId, status) => {
+    if (isGuestMode) return;
     if (!window.confirm(`Are you sure you want to set ALL orders for this user to ${status}?`)) return;
     
     try {
@@ -126,7 +141,7 @@ const AdminOrders = () => {
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Order Management</h1>
-            <p className="text-gray-500 mt-1">Manage all user orders and status</p>
+            <p className="text-gray-500 mt-1">{isGuestMode ? 'Demo preview • No real data, modifications disabled' : 'Manage all user orders and status'}</p>
           </div>
           <div className="bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-200 flex items-center gap-2">
             <span className="text-sm font-semibold text-gray-700">Total Orders:</span>
@@ -134,6 +149,11 @@ const AdminOrders = () => {
           </div>
         </div>
 
+        {isGuestMode && (
+          <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-amber-800 text-sm">
+            <span className="font-medium">Guest Mode:</span> Demo order preview — no real admin data shown.
+          </div>
+        )}
         {/* Filter Bar */}
         <div className="bg-white rounded-lg shadow-sm p-4 mb-6 flex flex-wrap gap-2 items-center border border-gray-100">
           <Filter className="w-5 h-5 text-gray-400 mr-2" />
@@ -242,6 +262,7 @@ const AdminOrders = () => {
                     </div>
 
 
+                    {!isGuestMode && (
                     <div className="bg-blue-50/50 rounded-lg p-4 border border-blue-100 flex flex-col sm:flex-row items-center justify-between gap-4">
                       <div className="flex items-center gap-2">
                         <User className="w-4 h-4 text-blue-600" />
@@ -266,6 +287,7 @@ const AdminOrders = () => {
                         </button>
                       </div>
                     </div>
+                    )}
 
                   </div>
                 </div>

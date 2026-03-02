@@ -10,9 +10,10 @@ import {
   Shield,
   Plus,
   Package,
-  ClipboardList
+  ClipboardList,
+  Eye
 } from 'lucide-react';
-import { logoutUser } from '../authSlice';
+import { logoutUser, enterGuestMode, exitGuestMode } from '../authSlice';
 import { fetchCart,clearCart } from '../cartSlice';
 import axiosClient from '../utils/axiosClient';
 import { getPriceForCountry, getCurrencyForCountry, formatPrice } from '../utils/pricing';
@@ -20,7 +21,7 @@ import { getPriceForCountry, getCurrencyForCountry, formatPrice } from '../utils
 const Navbar = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { user, selectedCountry } = useSelector((state) => state.auth);
+  const { user, selectedCountry, isGuestMode } = useSelector((state) => state.auth);
   const { items = [], total } = useSelector((state) => state.cart);
   
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -32,10 +33,10 @@ const Navbar = () => {
   const searchRef = useRef(null);
 
   useEffect(() => {
-    if (user) {
+    if (user && !isGuestMode) {
       dispatch(fetchCart());
     }
-  }, [dispatch, user]);
+  }, [dispatch, user, isGuestMode]);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -77,8 +78,12 @@ const Navbar = () => {
   }, []);
 
   const handleLogout = () => {
-    dispatch(logoutUser());
-    dispatch(clearCart());
+    if (isGuestMode) {
+      dispatch(exitGuestMode());
+    } else {
+      dispatch(logoutUser());
+      dispatch(clearCart());
+    }
     setIsDropdownOpen(false);
   };
 
@@ -231,82 +236,86 @@ const Navbar = () => {
 
           {/* Login Buttons */}
 
-          <div className="flex items-center gap-2 md:gap-5">
-            
-            <div className="relative" ref={dropdownRef}>
-              {user ? (
-                <>
-                  <button 
-                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                    className="group flex items-center gap-2 bg-white border border-gray-200 p-1.5 pl-4 rounded-2xl shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-300 active:scale-95"
-                  >
-                    <div className="flex flex-col items-start mr-1 text-left">
-                      <span className="text-sm font-extrabold text-gray-900 group-hover:text-blue-600 transition-colors">
-                        {user.firstName || 'User'}
-                      </span>
+          {/* Login Buttons */}
+        <div className="flex items-center gap-2 md:gap-5">
+          <div className="relative" ref={dropdownRef}>
+            {user ? (
+              <>
+                <button 
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="group flex items-center gap-2 bg-white border border-gray-200 p-1.5 pl-4 rounded-2xl shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-300 active:scale-95"
+                >
+                  <div className="flex flex-col items-start mr-1 text-left">
+                    <span className="text-sm font-extrabold text-gray-900 group-hover:text-blue-600 transition-colors">
+                      {user.firstName || 'User'}
+                    </span>
+                  </div>
+
+                  <div className="relative bg-blue-50 group-hover:bg-blue-600 w-10 h-10 rounded-xl transition-all duration-300 flex items-center justify-center">
+                    <span className="font-black text-sm text-blue-600 group-hover:text-white uppercase transition-colors">
+                      {getInitials(user.firstName)}
+                    </span>
+                  </div>
+                </button>
+
+                {/* Custom Menu */}
+                {isDropdownOpen && (
+                  <div className="absolute right-0 mt-3 w-64 bg-white border border-gray-100 rounded-2xl shadow-2xl py-2 z-[100] animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="px-5 py-4 border-b border-gray-50">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{isGuestMode ? 'Guest Mode' : 'Account info'}</p>
+                      <p className="text-sm font-black text-gray-800 mt-1">{user.firstName} {user.lastName || ''}</p>
+                      <p className="text-xs text-gray-500 truncate">{user.emailId}</p>
+                      <p className="text-xs text-blue-500">Role: {user.role}</p>
+                      {isGuestMode && (
+                        <p className="text-[10px] text-amber-600 font-medium mt-1">Demo preview • No real data</p>
+                      )}
                     </div>
 
-                    <div className="relative bg-blue-50 group-hover:bg-blue-600 w-10 h-10 rounded-xl transition-all duration-300 flex items-center justify-center">
-                      <span className="font-black text-sm text-blue-600 group-hover:text-white uppercase transition-colors">
-                        {getInitials(user.firstName)}
-                      </span>
-                      </div>
-                  </button>
+                    <div className="p-2">
+                      <NavLink 
+                        to="/profile" 
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition-colors group"
+                      >
+                        <UserCircle className="w-5 h-5 text-gray-400 group-hover:text-blue-500" />
+                        My Profile
+                      </NavLink>
 
-                  {/* Custom Menu */}
-                  {isDropdownOpen && (
-                    <div className="absolute right-0 mt-3 w-64 bg-white border border-gray-100 rounded-2xl shadow-2xl py-2 z-[100] animate-in fade-in slide-in-from-top-2 duration-200">
-                      <div className="px-5 py-4 border-b border-gray-50">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Account info</p>
-                        <p className="text-sm font-black text-gray-800 mt-1">{user.firstName} {user.lastName || ''}</p>
-                        <p className="text-xs text-gray-500 truncate">{user.emailId}</p>
-                        <p className="text-xs text-blue-500">Role: {user.role}</p>
-                      </div>
+                      <NavLink 
+                        to="/orders"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition-colors group"
+                      >
+                        <ClipboardList className="w-5 h-5 text-gray-400 group-hover:text-blue-500" />
+                        My Orders
+                      </NavLink>
 
-                      <div className="p-2">
-                        <NavLink 
-                          to="/profile" 
-                          onClick={() => setIsDropdownOpen(false)}
-                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition-colors group"
-                        >
-                          <UserCircle className="w-5 h-5 text-gray-400 group-hover:text-blue-500" />
-                          My Profile
-                        </NavLink>
+                      {user.role === 'admin' && (
+                        <>
+                          <NavLink 
+                            to="/admin/products" 
+                            onClick={() => setIsDropdownOpen(false)}
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:bg-purple-50 hover:text-purple-600 transition-colors group"
+                          >
+                            <Shield className="w-5 h-5 text-gray-400 group-hover:text-purple-500" />
+                            Admin Panel
+                          </NavLink>
 
-                        <NavLink 
-                          to="/orders"
-                          onClick={() => setIsDropdownOpen(false)}
-                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition-colors group"
-                        >
-                          <ClipboardList className="w-5 h-5 text-gray-400 group-hover:text-blue-500" />
-                          My Orders
-                        </NavLink>
+                          <NavLink
+                            to="/admin/orders"
+                            onClick={() => setIsDropdownOpen(false)}
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition-colors group"
+                          >
+                            <ClipboardList className="w-5 h-5 text-gray-400 group-hover:text-blue-500" />
+                            User Orders
+                          </NavLink>
 
-                        {user.role === 'admin' && (
-                          <>
-                            <NavLink 
-                              to="/admin/products" 
-                              onClick={() => setIsDropdownOpen(false)}
-                              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:bg-purple-50 hover:text-purple-600 transition-colors group"
-                            >
-                              <Shield className="w-5 h-5 text-gray-400 group-hover:text-purple-500" />
-                              Admin Panel
-                            </NavLink>
+                          <div className="h-[1px] bg-gray-50 my-2 mx-2"></div>
 
-                            <NavLink
-                              to="/admin/orders"
-                              onClick={() => setIsDropdownOpen(false)}
-                              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition-colors group"
-                            >
-                              <ClipboardList className="w-5 h-5 text-gray-400 group-hover:text-blue-500" />
-                              User Orders
-                            </NavLink>
-
-                            <div className="h-[1px] bg-gray-50 my-2 mx-2"></div>
-
-                            <div className="px-3 py-1">
-                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Product Management</p>
-                              <div className="space-y-1">
+                          <div className="px-3 py-1">
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Product Management</p>
+                            <div className="space-y-1">
+                              {!isGuestMode && (
                                 <NavLink 
                                   to="/admin/products/create" 
                                   onClick={() => setIsDropdownOpen(false)}
@@ -315,33 +324,45 @@ const Navbar = () => {
                                   <Plus className="w-4 h-4 text-gray-400 group-hover:text-green-500" />
                                   Create Product
                                 </NavLink>
-                                <NavLink 
-                                  to="/admin/products" 
-                                  onClick={() => setIsDropdownOpen(false)}
-                                  className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition-colors group"
-                                >
-                                  <Package className="w-4 h-4 text-gray-400 group-hover:text-blue-500" />
-                                  Manage Products
-                                </NavLink>
-                              </div>
+                              )}
+                              <NavLink 
+                                to="/admin/products" 
+                                onClick={() => setIsDropdownOpen(false)}
+                                className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition-colors group"
+                              >
+                                <Package className="w-4 h-4 text-gray-400 group-hover:text-blue-500" />
+                                Manage Products
+                              </NavLink>
                             </div>
-                          </>
-                        )}
+                          </div>
+                        </>
+                      )}
 
-                        <div className="h-[1px] bg-gray-50 my-2 mx-2"></div>
+                      <div className="h-[1px] bg-gray-50 my-2 mx-2"></div>
 
-                        <button 
-                          onClick={handleLogout}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-red-500 hover:bg-red-50 transition-colors group text-left"
-                        >
-                          <LogOut className="w-5 h-5 text-red-400 group-hover:text-red-500" />
-                          Logout
-                        </button>
-                      </div>
+                      <button 
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-red-500 hover:bg-red-50 transition-colors group text-left"
+                      >
+                        <LogOut className="w-5 h-5 text-red-400 group-hover:text-red-500" />
+                        {isGuestMode ? 'Exit Guest Mode' : 'Logout'}
+                      </button>
                     </div>
-                  )}
-                </>
-              ) : (
+                  </div>
+                )}
+              </>
+            ) : (
+              /* Non-logged in state - Guest Mode and Sign In side by side */
+              <div className="flex items-center gap-2">
+                <span
+                  onClick={() => dispatch(enterGuestMode())}
+                  className="group relative flex items-center gap-2 bg-amber-50 border border-amber-200 p-4 pl-4 rounded-2xl shadow-sm hover:shadow-md hover:border-amber-300 hover:bg-amber-100 transition-all duration-300 active:scale-95 cursor-pointer"
+                >
+                  <Eye className="w-5 h-5 text-amber-600 group-hover:text-amber-700" />
+                  <span className="text-sm font-extrabold text-amber-800 group-hover:text-amber-900 transition-colors">
+                    Guest Mode
+                  </span>
+                </span>
                 <NavLink 
                   to="/login" 
                   className="group relative flex items-center gap-2 bg-white border border-gray-200 p-1.5 pl-5 rounded-2xl shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-300 active:scale-95"
@@ -353,29 +374,29 @@ const Navbar = () => {
                     <User className="w-5 h-5 text-gray-600 group-hover:text-white transition-transform group-hover:scale-110" />
                   </div>
                 </NavLink>
-              )}
+              </div>
+            )}
+          </div>
+
+          {/* Cart Button */}
+          <NavLink 
+            to="/cart" 
+            className="group relative flex items-center gap-2 bg-white border border-gray-200 p-1.5 pl-4 rounded-2xl shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-300 active:scale-95"
+          >
+            <div className="flex flex-col items-start mr-1">
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">
+                My Cart
+              </span>
+              <span className="text-sm font-extrabold text-gray-900 group-hover:text-blue-600 transition-colors">
+                {formatPrice(getDiscountedTotal(), selectedCountry)}
+              </span>
             </div>
 
-            {/* Cart Button */}
-            <NavLink 
-              to="/cart" 
-              className="group relative flex items-center gap-2 bg-white border border-gray-200 p-1.5 pl-4 rounded-2xl shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-300 active:scale-95"
-            >
-              <div className="flex flex-col items-start mr-1">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">
-                  My Cart
-                </span>
-                <span className="text-sm font-extrabold text-gray-900 group-hover:text-blue-600 transition-colors">
-                  {formatPrice(getDiscountedTotal(), selectedCountry)}
-                </span>
-              </div>
-
-              <div className="relative bg-gray-50 group-hover:bg-blue-600 p-2.5 rounded-xl transition-colors duration-300">
-                <ShoppingCart className="w-5 h-5 text-gray-600 group-hover:text-white transition-all duration-300" />
-              </div>
-            </NavLink>
-
-          </div>
+            <div className="relative bg-gray-50 group-hover:bg-blue-600 p-2.5 rounded-xl transition-colors duration-300">
+              <ShoppingCart className="w-5 h-5 text-gray-600 group-hover:text-white transition-all duration-300" />
+            </div>
+          </NavLink>
+        </div>
         </div>
       </div>
     </nav>

@@ -8,7 +8,7 @@ import { OrderShimmer } from '../components/Shimmer';
 
 const Order = () => {
   const navigate = useNavigate();
-  const { user, selectedCountry } = useSelector((state) => state.auth); 
+  const { user, selectedCountry, isGuestMode } = useSelector((state) => state.auth); 
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -22,6 +22,11 @@ const Order = () => {
   useEffect(() => {
     if (!user) {
       navigate('/login');
+      return;
+    }
+    if (isGuestMode) {
+      setOrders([]);
+      setLoading(false);
       return;
     }
 
@@ -38,7 +43,7 @@ const Order = () => {
     };
 
     fetchOrders();
-  }, [user, navigate]);
+  }, [user, isGuestMode, navigate]);
 
   useEffect(() => {
     if (loading) {
@@ -124,6 +129,11 @@ const Order = () => {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-6xl mx-auto px-4">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">My Orders</h1>
+        {isGuestMode && (
+          <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-amber-800 text-sm flex items-center gap-2">
+            <span className="font-medium">Guest Mode:</span> Demo preview — no real orders shown.
+          </div>
+        )}
 
         {orders.length === 0 ? (
           <div className="text-center py-20">

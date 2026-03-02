@@ -91,6 +91,7 @@ const authSlice = createSlice({
   initialState: {
     user: null,
     isAuthenticated: false,
+    isGuestMode: false,
     loading: false,
     error: null,
     selectedCountry: 'INDIA'
@@ -101,6 +102,22 @@ const authSlice = createSlice({
     },
     updateSelectedCountry: (state, action) => {
       state.selectedCountry = action.payload;
+    },
+    enterGuestMode: (state) => {
+      state.isGuestMode = true;
+      state.user = {
+        firstName: 'Guest',
+        lastName: 'User',
+        emailId: 'guest@demo.com',
+        role: 'admin',
+        _id: 'guest-demo'
+      };
+      state.isAuthenticated = false;
+    },
+    exitGuestMode: (state) => {
+      state.isGuestMode = false;
+      state.user = null;
+      state.isAuthenticated = false;
     },
   },
   extraReducers: (builder) => {
@@ -131,6 +148,7 @@ const authSlice = createSlice({
         state.loading = false;
         state.isAuthenticated = !!action.payload;
         state.user = action.payload;
+        state.isGuestMode = false;
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = false;
@@ -165,6 +183,7 @@ const authSlice = createSlice({
         state.loading = false;
         state.user = null;
         state.isAuthenticated = false;
+        state.isGuestMode = false;
         state.error = null;
       })
       .addCase(logoutUser.rejected, (state, action) => {
@@ -176,5 +195,5 @@ const authSlice = createSlice({
   }
 });
 
-export const { updateUser, updateSelectedCountry } = authSlice.actions;
+export const { updateUser, updateSelectedCountry, enterGuestMode, exitGuestMode } = authSlice.actions;
 export default authSlice.reducer;

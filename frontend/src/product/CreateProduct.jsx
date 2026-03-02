@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { Package, Upload, X, Loader2, AlertCircle, CheckCircle, Plus, Star } from 'lucide-react';
 import axiosClient from '../utils/axiosClient';
 import axios from 'axios';
 
 const CreateProduct = () => {
   const navigate = useNavigate();
+  const { isGuestMode } = useSelector(state => state.auth);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(null);
@@ -23,6 +25,12 @@ const CreateProduct = () => {
   });
 
   const categories = ['electronics', 'clothing', 'books', 'home', 'sports', 'beauty', 'toys', 'automotive'];
+
+  useEffect(() => {
+    if (isGuestMode) {
+      navigate('/admin/products', { state: { message: 'Guest mode: product modifications are disabled.' } });
+    }
+  }, [isGuestMode, navigate]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;

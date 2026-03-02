@@ -11,7 +11,7 @@ import { updateUser, updateSelectedCountry } from '../authSlice';
 const ProfilePage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { user } = useSelector((state) => state.auth);
+  const { user, isGuestMode } = useSelector((state) => state.auth);
 
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -38,8 +38,30 @@ const ProfilePage = () => {
       navigate('/login');
       return;
     }
+    if (isGuestMode) {
+      setProfile({
+        firstName: 'Guest',
+        lastName: 'User',
+        emailId: 'guest@demo.com',
+        phone: '••••••••••',
+        address: { street: 'Demo Street', city: 'Demo City', state: 'Demo', zipCode: '00000', country: 'INDIA' },
+        role: 'admin',
+        cart: [],
+        orders: [],
+        searchHistory: [],
+        clickedProducts: []
+      });
+      setFormData({
+        firstName: 'Guest',
+        lastName: 'User',
+        phone: '••••••••••',
+        address: { street: 'Demo Street', city: 'Demo City', state: 'Demo', zipCode: '00000', country: 'INDIA' }
+      });
+      setLoading(false);
+      return;
+    }
     fetchProfile();
-  }, [user, navigate]);
+  }, [user, isGuestMode, navigate]);
 
   const fetchProfile = async () => {
     try {
@@ -179,9 +201,9 @@ const ProfilePage = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
-              <p className="text-gray-600 mt-1">Manage your account information</p>
+              <p className="text-gray-600 mt-1">{isGuestMode ? 'Demo preview • No real data' : 'Manage your account information'}</p>
             </div>
-            {!isEditing ? (
+            {!isGuestMode && !isEditing ? (
               <button
                 onClick={() => setIsEditing(true)}
                 className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
@@ -189,7 +211,7 @@ const ProfilePage = () => {
                 <Edit3 className="w-4 h-4" />
                 Edit Profile
               </button>
-            ) : (
+            ) : !isGuestMode ? (
               <div className="flex gap-2">
                 <button
                   onClick={handleSave}
@@ -211,7 +233,7 @@ const ProfilePage = () => {
                   Cancel
                 </button>
               </div>
-            )}
+            ) : null}
           </div>
 
           {/* Success Message */}
@@ -231,6 +253,11 @@ const ProfilePage = () => {
           )}
         </div>
 
+        {isGuestMode && (
+          <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-amber-800 text-sm">
+            <span className="font-medium">Guest Mode:</span> Demo profile — no real data, editing disabled.
+          </div>
+        )}
         {/* Profile Information */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white rounded-xl shadow-sm p-6">
@@ -244,7 +271,7 @@ const ProfilePage = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   First Name *
                 </label>
-                {isEditing ? (
+                {(isEditing && !isGuestMode) ? (
                   <input
                     type="text"
                     name="firstName"
@@ -265,7 +292,7 @@ const ProfilePage = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Last Name
                 </label>
-                {isEditing ? (
+                {(isEditing && !isGuestMode) ? (
                   <input
                     type="text"
                     name="lastName"
@@ -295,7 +322,7 @@ const ProfilePage = () => {
                   <Phone className="w-4 h-4" />
                   Phone Number
                 </label>
-                {isEditing ? (
+                {(isEditing && !isGuestMode) ? (
                   <input
                     type="tel"
                     name="phone"
@@ -322,7 +349,7 @@ const ProfilePage = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Street Address
                 </label>
-                {isEditing ? (
+                {(isEditing && !isGuestMode) ? (
                   <input
                     type="text"
                     name="address.street"
@@ -340,7 +367,7 @@ const ProfilePage = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   City
                 </label>
-                {isEditing ? (
+                {(isEditing && !isGuestMode) ? (
                   <input
                     type="text"
                     name="address.city"
@@ -358,7 +385,7 @@ const ProfilePage = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   State
                 </label>
-                {isEditing ? (
+                {(isEditing && !isGuestMode) ? (
                   <input
                     type="text"
                     name="address.state"
@@ -376,7 +403,7 @@ const ProfilePage = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   ZIP Code
                 </label>
-                {isEditing ? (
+                {(isEditing && !isGuestMode) ? (
                   <input
                     type="text"
                     name="address.zipCode"
@@ -394,7 +421,7 @@ const ProfilePage = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Country
                 </label>
-                {isEditing ? (
+                {(isEditing && !isGuestMode) ? (
                   <select
                     name="address.country"
                     value={formData.address.country}

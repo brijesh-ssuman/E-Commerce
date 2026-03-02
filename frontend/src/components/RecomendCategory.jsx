@@ -12,7 +12,7 @@ const RecomendCategoryPage = () => {
   const { categoryName } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { user, selectedCountry } = useSelector((state) => state.auth);
+  const { user, selectedCountry, isGuestMode } = useSelector((state) => state.auth);
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -73,13 +73,18 @@ const RecomendCategoryPage = () => {
   const uniqueBrands = [...new Set(currentCategoryProducts.map(p => p.brand).filter(Boolean))];
 
   const handleAddToCart = async (productId) => {
-    if (!user) {
+    if (!user && !isGuestMode) {
       navigate('/login');
       return;
     }
     try {
-      await dispatch(addToCart({ productId, quantity: 1 })).unwrap();
-      alert('Added to cart!');
+      if (isGuestMode) {
+        await dispatch({ type: 'cart/addLocalItem', payload: { productId, quantity: 1 } });
+        alert('Added to cart (guest)!');
+      } else {
+        await dispatch(addToCart({ productId, quantity: 1 })).unwrap();
+        alert('Added to cart!');
+      }
     } catch (error) {
       alert('Failed: ' + error);
     }

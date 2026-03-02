@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { Package, Plus, Edit, Trash2, Search, Loader2, Star, Eye, Zap, X } from 'lucide-react';
 import axiosClient from '../utils/axiosClient';
@@ -7,7 +7,9 @@ import { formatPrice, getPriceForCountry } from '../utils/pricing';
 
 const AdminProducts = () => {
   const navigate = useNavigate();
-  const { selectedCountry } = useSelector(state => state.auth);
+  const location = useLocation();
+  const { selectedCountry, isGuestMode } = useSelector(state => state.auth);
+  const redirectMessage = location.state?.message;
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -56,6 +58,7 @@ const AdminProducts = () => {
   };
 
   const handleDelete = async (productId) => {
+    if (isGuestMode) return;
     if (!window.confirm('Are you sure you want to delete this product?')) return;
     try {
       await axiosClient.delete(`/product/delete/${productId}`);
@@ -120,24 +123,32 @@ const AdminProducts = () => {
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
         
+        {redirectMessage && (
+          <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-amber-800 text-sm flex items-center justify-between">
+            <span>{redirectMessage}</span>
+            <button onClick={() => navigate(location.pathname, { replace: true, state: {} })} className="text-amber-600 hover:text-amber-800 font-medium">Dismiss</button>
+          </div>
+        )}
         {/* Header */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6 flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
               <Package className="text-blue-600" /> Product Admin
             </h1>
-            <p className="text-gray-500">Manage products and set Sales</p>
+            <p className="text-gray-500">{isGuestMode ? 'Demo preview • Read-only, no changes allowed' : 'Manage products and set Sales'}</p>
           </div>
-          <div className="flex gap-3">
-             {currentFreshId && (
-                <button onClick={removeFreshSale} className="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 font-medium transition-colors">
-                    Stop Current Sale
-                </button>
-             )}
-             <button onClick={() => navigate('/admin/products/create')} className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700">
-               <Plus size={18} /> Add Product
-             </button>
-          </div>
+          {!isGuestMode && (
+            <div className="flex gap-3">
+               {currentFreshId && (
+                  <button onClick={removeFreshSale} className="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 font-medium transition-colors">
+                      Stop Current Sale
+                  </button>
+               )}
+               <button onClick={() => navigate('/admin/products/create')} className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700">
+                 <Plus size={18} /> Add Product
+               </button>
+            </div>
+          )}
         </div>
 
         {/* Filters */}
@@ -188,16 +199,16 @@ const AdminProducts = () => {
                 </div>
 
                 <div className="grid grid-cols-4 gap-2">
-                   <button onClick={() => navigate(`/product/${product._id}`)} className="bg-gray-100 hover:bg-gray-200 p-2 rounded-lg text-gray-600 flex justify-center"><Eye size={18} /></button>
-                   <button onClick={() => navigate(`/admin/products/update/${product._id}`)} className="bg-blue-100 hover:bg-blue-200 p-2 rounded-lg text-blue-600 flex justify-center"><Edit size={18} /></button>
-                   <button onClick={() => handleDelete(product._id)} className="bg-red-100 hover:bg-red-200 p-2 rounded-lg text-red-600 flex justify-center"><Trash2 size={18} /></button>
-                   
+                   <button onClick={() => navigate(`/product/${product._id}`)} className="bg-gray-100 hover:bg-gray-200 p-2 rounded-lg text-gray-600 flex justify-center" title="View"><Eye size={18} /></button>
+                   <button onClick={() => !isGuestMode && navigate(`/admin/products/update/${product._id}`)} disabled={isGuestMode} className={`p-2 rounded-lg flex justify-center ${isGuestMode ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-blue-100 hover:bg-blue-200 text-blue-600'}`} title={isGuestMode ? 'Guest mode: disabled' : 'Edit'}><Edit size={18} /></button>
+                   <button onClick={() => !isGuestMode && handleDelete(product._id)} disabled={isGuestMode} className={`p-2 rounded-lg flex justify-center ${isGuestMode ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-red-100 hover:bg-red-200 text-red-600'}`} title={isGuestMode ? 'Guest mode: disabled' : 'Delete'}><Trash2 size={18} /></button>
                    <button 
-                     onClick={() => openFreshModal(product)} 
-                     title="Set as Sale Product"
-                     className={`p-2 rounded-lg flex justify-center transition-colors ${currentFreshId === product._id ? 'bg-orange-500 text-white' : 'bg-orange-100 hover:bg-orange-200 text-orange-600'}`}
+                     onClick={() => !isGuestMode && openFreshModal(product)} 
+                     disabled={isGuestMode}
+                     title={isGuestMode ? 'Guest mode: disabled' : 'Set as Sale Product'}
+                     className={`p-2 rounded-lg flex justify-center transition-colors ${isGuestMode ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : currentFreshId === product._id ? 'bg-orange-500 text-white' : 'bg-orange-100 hover:bg-orange-200 text-orange-600'}`}
                    >
-                     <Zap size={18} fill={currentFreshId === product._id ? "currentColor" : "none"} />
+                     <Zap size={18} fill={currentFreshId === product._id && !isGuestMode ? "currentColor" : "none"} />
                    </button>
                 </div>
               </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router';
+import { useSelector } from 'react-redux';
 import {
   Package,
   Upload,
@@ -15,6 +16,7 @@ import axios from 'axios';
 const UpdateProduct = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { isGuestMode } = useSelector(state => state.auth);
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
   const [success, setSuccess] = useState(false);
@@ -43,8 +45,12 @@ const UpdateProduct = () => {
   ];
 
   useEffect(() => {
+    if (isGuestMode) {
+      navigate('/admin/products', { state: { message: 'Guest mode: product modifications are disabled.' } });
+      return;
+    }
     fetchProduct();
-  }, [id]);
+  }, [id, isGuestMode, navigate]);
 
   const fetchProduct = async () => {
     try {
