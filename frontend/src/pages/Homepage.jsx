@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
-  Loader2, ChevronLeft, ChevronRight, Truck, Shield, Star, 
+  ChevronLeft, ChevronRight, Truck, Shield, Star, 
   Filter, X, ShoppingCart, Clock, Zap, Mail, Megaphone
 } from 'lucide-react';
 import axiosClient from '../utils/axiosClient';
 import { useDispatch, useSelector } from 'react-redux';
+import { updateUser, refreshUserProfile } from '../authSlice';
 import { addToCart } from '../cartSlice';
 import { fetchAllProducts } from '../productSlice';
 import { getPriceForCountry, getCurrencyForCountry, formatConvertedPrice } from '../utils/pricing';
@@ -145,6 +146,9 @@ const Homepage = () => {
   const { allProducts, loading, error } = useSelector((state) => state.products);
   const [showContent, setShowContent] = useState(false);
   const featuredScrollRef = useRef(null);
+  const [recentClickedProducts, setRecentClickedProducts] = useState([]);
+  const [searchHistoryProducts, setSearchHistoryProducts] = useState([]);
+  const [randomCategory, setRandomCategory] = useState('');
 
   const categoriesList = ['electronics','clothing','books','home','sports','beauty','toys','automotive'];
 
@@ -180,6 +184,47 @@ const Homepage = () => {
     fetchFreshSale();
     const interval = setInterval(fetchFreshSale, 1000);
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (user && !user._id?.startsWith?.('guest')) {
+      dispatch(refreshUserProfile());
+    }
+  }, [dispatch, user?._id]);
+
+  useEffect(() => {
+    if (user && allProducts.length > 0) {
+      const recentClicked = [...(user.clickedProducts || [])];
+      const seenRecent = new Set();
+      const recentDeduped = [];
+      recentClicked.forEach(item => {
+        const pid = item.productId?._id ?? item.productId;
+        const prod = allProducts.find(p => p._id === pid || String(p._id) === String(pid));
+        if (prod && !seenRecent.has(prod._id)) {
+          seenRecent.add(prod._id);
+          recentDeduped.push(prod);
+        }
+      });
+      setRecentClickedProducts(recentDeduped.slice(0, 4));
+
+      const searchHistory = [...(user.searchHistory || [])];
+      const seenSearch = new Set();
+      const searchDeduped = [];
+      searchHistory.forEach(item => {
+        const pid = item.productId?._id ?? item.productId;
+        const prod = allProducts.find(p => p._id === pid || String(p._id) === String(pid));
+        if (prod && !seenSearch.has(prod._id)) {
+          seenSearch.add(prod._id);
+          searchDeduped.push(prod);
+        }
+      });
+      setSearchHistoryProducts(searchDeduped.slice(0, 4));
+    }
+  }, [user, allProducts]);
+
+  useEffect(() => {
+    const randomIdx = Math.floor(Math.random() * categoriesList.length);
+    setRandomCategory(categoriesList[randomIdx]);
   }, []);
 
   useEffect(() => {
@@ -246,12 +291,34 @@ const Homepage = () => {
           productCategory: product.category,
           searchQuery: searchQuery
         });
+
+        setSearchHistoryProducts(prev => {
+          const updated = [product, ...prev.filter(p => p._id !== product._id)];
+          return updated.slice(0,4);
+        });
+
+        dispatch(updateUser({
+          ...user,
+          searchHistory: [{ productId: product._id, productName: product.name, productCategory: product.category, searchQuery } , ...(user.searchHistory||[])]
+        }));
       } catch (error) {
         console.error('Failed to track search history:', error);
       }
     }
     
     await trackProductClick(product);
+
+    setRecentClickedProducts(prev => {
+      const updated = [product, ...prev.filter(p => p._id !== product._id)];
+      return updated.slice(0,4);
+    });
+    if (user) {
+      dispatch(updateUser({
+        ...user,
+        clickedProducts: [{ productId: product._id, clickedAt: new Date(), productName: product.name, productCategory: product.category }, ...(user.clickedProducts||[])]
+      }));
+    }
+
     navigate(`/product/${product._id}`);
   };
 
@@ -319,6 +386,9 @@ const Homepage = () => {
   const displayElectronics = electronics.length ? electronics : allProducts.slice(0, 4);
   const displayHome = home.length ? home : allProducts.slice(4, 8);
   const displayFashion = fashion.length ? fashion : allProducts.slice(8, 9);
+  const randomCategoryProducts = randomCategory 
+    ? allProducts.filter(p => p.category?.toLowerCase().includes(randomCategory.toLowerCase()))
+    : [];
 
   return (
     <div className="min-h-screen bg-blue-50/50 relative">
@@ -348,109 +418,186 @@ const Homepage = () => {
         </div>
       </section>
 
-      {/* HERO */}
-      <section className="bg-gradient-to-r from-blue-500 to-purple-500 text-white relative">
-        <div className="container mx-auto px-4 text-center pt-20 pb-48"> 
-          <h1 className="text-5xl font-bold mb-6 drop-shadow-md">Welcome to Our Buy Zone</h1>
+      {/* HERO + QUAD WRAPPER */}
+      <section className="bg-gradient-to-b from-sky-700 text-white relative pb-5">
+
+  {/* HERO */}
+        <div className="container mx-auto px-4 text-center pt-20">
+          <h1 className="text-5xl font-bold mb-6 drop-shadow-md">
+            Welcome to Our Buy Zone
+          </h1>
           <p className="text-xl mb-8 max-w-2xl mx-auto text-blue-100">
             Discover amazing products at unbeatable prices. Shop with confidence and enjoy fast and secure delivery.
-            </p>
+          </p>
         </div>
-      </section>
 
-      {/* QUAD CARDS */}
-      <div className="container mx-auto px-4 -mt-32 relative z-10 mb-16">
-        {loading || !showContent ? (
-          <QuadCardsShimmer />
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <CategoryCard title="Electronics & Gadgets" products={displayElectronics} categorySlug="electronics" type="grid" navigate={navigate} handleProductClick={handleProductClick}/>
-            <CategoryCard title="Home Appliances" products={displayHome} categorySlug="home" type="single" navigate={navigate} handleProductClick={handleProductClick}/>
-            <CategoryCard title="Fashion Trends" products={displayFashion} categorySlug="clothing" type="single" navigate={navigate} handleProductClick={handleProductClick}/>
-            
-            {/* SPONSORSHIP */}
-            <div className="bg-white flex flex-col justify-between h-full shadow-lg rounded-xl border border-blue-100 overflow-hidden relative">
-              
-
-              <div className="p-4 bg-white border-b border-gray-100 z-20">
-                  <h2 className="text-xl font-bold mb-2 text-gray-800 line-clamp-1">
-                      {user ? `Welcome back, ${user.firstName}` : 'Sign in for best experience'}
-                  </h2>
-                  <button 
-                      onClick={() => user ? navigate('/profile') : navigate('/login')}
-                      className={`w-full text-sm font-semibold py-2.5 rounded-lg shadow-sm transition-colors ${
-                          user 
-                          ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' 
-                          : 'bg-blue-600 hover:bg-blue-700 text-white'
-                      }`}
-                  >
-                      {user ? 'My Account' : 'Sign in securely'}
-                  </button>
-              </div>
-
-
-              <div className="flex-1 p-4 relative flex flex-col justify-center">
-                  {freshSaleData.isActive ? (
-                      <div className="cursor-pointer group h-full flex flex-col" onClick={() => navigate(`/product/${freshProduct?._id}`)}>
-                           <div className="flex justify-between items-center mb-2">
-                               <span className="bg-red-50 text-red-600 text-[10px] font-bold px-2 py-1 rounded border border-red-100 flex items-center gap-1 animate-pulse">
-                                   <Zap className="w-3 h-3 fill-current" /> FRESH DEAL
-                               </span>
-                               <div className="text-xs font-mono font-bold text-gray-600 bg-gray-100 px-2 py-1 rounded flex items-center gap-1">
-                                  <Clock className="w-3 h-3" /> {freshSaleData.timeString}
-                               </div>
-                           </div>
-      
-                          <div className="relative flex-1 bg-gray-50 rounded-lg p-2 mb-2 flex items-center justify-center overflow-hidden">
-                              <img src={freshProduct?.images?.[0]} alt="Deal" className="max-w-full h-24 object-contain group-hover:scale-110 transition-transform duration-500" />
-                              <div className="absolute top-2 right-2 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded">
-                                  -{freshSaleData.discount}%
+        {/* QUAD CARDS */}
+          <div className="container mx-auto px-4 mt-16 relative z-10">
+            {loading || !showContent ? (
+              <QuadCardsShimmer />
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {/* Recent History Card */}
+                    <div className="bg-white p-4 flex flex-col justify-between h-full z-10 shadow-lg rounded-xl cursor-pointer hover:shadow-xl transition-shadow border border-blue-100">
+                      <h2 className="text-xl font-bold mb-4 text-gray-800 line-clamp-2 h-14">Recent History</h2>
+                      <div className="flex-grow">
+                        {recentClickedProducts.length > 0 ? (
+                          <div className="grid grid-cols-2 gap-2 h-full">
+                            {recentClickedProducts.slice(0, 4).map((item, idx) => (
+                              <div key={idx} onClick={() => handleProductClick(item)}>
+                                <img 
+                                  src={item.images?.[0]} 
+                                  alt={item.name} 
+                                  className="w-full h-24 object-contain mb-1 p-1 bg-gray-50 rounded-lg"
+                                />
                               </div>
+                            ))}
                           </div>
-
-                          <div>
-                              <h3 className="text-sm font-bold text-gray-800 line-clamp-1 mb-1">{freshProduct?.name}</h3>
-                              <div className="flex items-center justify-between">
-                                  <div className="flex flex-col">
-                                      {freshProduct ? (() => {
-                                        const originalPrice = getPriceForCountry(freshProduct, selectedCountry);
-                                        const discountedAmount = originalPrice.price * (1 - freshSaleData.discount / 100);
-                                        const discountedPrice = formatConvertedPrice(discountedAmount, selectedCountry);
-                                        return (
-                                          <>
-                                            <span className="text-[10px] text-gray-400 line-through">Was {originalPrice.symbol}{originalPrice.price}</span>
-                                            <span className="text-lg font-bold text-red-600 leading-none">
-                                              {discountedPrice.symbol}{discountedPrice.price}
-                                            </span>
-                                          </>
-                                        );
-                                      })() : null}
-                                  </div>
-                                  <button className="bg-red-100 text-red-600 p-1.5 rounded-lg hover:bg-red-600 hover:text-white transition-colors">
-                                      <ShoppingCart className="w-4 h-4" />
-                                  </button>
-                              </div>
+                        ) : (
+                          <div className="h-full flex items-center justify-center text-gray-400">
+                            <p className="text-sm">No history yet</p>
                           </div>
+                        )}
                       </div>
-                  ) : (
-                      <div className="h-full flex flex-col items-center justify-center text-center bg-gradient-to-br from-gray-50 to-blue-50 rounded-lg border border-dashed border-gray-300 p-4">
-                          <div className="bg-white p-3 rounded-full shadow-sm mb-3">
-                              <Megaphone className="w-6 h-6 text-blue-500" />
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate('/history/recent');
+                        }}
+                        className="text-sm text-left text-blue-600 font-semibold hover:text-blue-800 hover:underline mt-4 block"
+                      >
+                        View all History &rarr;
+                      </button>
+                    </div>
+
+                    {/* Search History Card */}
+                    <div className="bg-white p-4 flex flex-col justify-between h-full z-10 shadow-lg rounded-xl cursor-pointer hover:shadow-xl transition-shadow border border-blue-100">
+                      <h2 className="text-xl font-bold mb-4 text-gray-800 line-clamp-2 h-14">Search History</h2>
+                      <div className="flex-grow">
+                        {searchHistoryProducts.length > 0 ? (
+                          <div className="grid grid-cols-2 gap-2 h-full">
+                            {searchHistoryProducts.slice(0, 4).map((item, idx) => (
+                              <div key={idx} onClick={() => handleProductClick(item)}>
+                                <img 
+                                  src={item.images?.[0]} 
+                                  alt={item.name} 
+                                  className="w-full h-24 object-contain mb-1 p-1 bg-gray-50 rounded-lg"
+                                />
+                              </div>
+                            ))}
                           </div>
-                          <h3 className="font-bold text-gray-700 mb-1">Advertise Here</h3>
-                          <p className="text-xs text-gray-500 mb-4 px-2">
-                              Reach thousands of customers daily. Boost your brand visibility now.
-                          </p>
-                          <button className="text-xs font-bold text-blue-600 border border-blue-200 bg-white px-3 py-1.5 rounded-full hover:bg-blue-50 flex items-center gap-1 transition-colors">
-                              <Mail className="w-3 h-3" /> Contact Sales
+                        ) : (
+                          <div className="h-full flex items-center justify-center text-gray-400">
+                            <p className="text-sm">No search history</p>
+                          </div>
+                        )}
+                      </div>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate('/history/search');
+                        }}
+                        className="text-sm text-left text-blue-600 font-semibold hover:text-blue-800 hover:underline mt-4 block"
+                      >
+                        View History &rarr;
+                      </button>
+                    </div>
+
+                    {/* Random Category Card */}
+                    <CategoryCard 
+                      title={randomCategory.charAt(0).toUpperCase() + randomCategory.slice(1)} 
+                      products={randomCategoryProducts.slice(0, 4)} 
+                      categorySlug={randomCategory} 
+                      type="grid" 
+                      navigate={navigate} 
+                      handleProductClick={handleProductClick}
+                    />
+                    
+                    {/* SPONSORSHIP */}
+                    <div className="bg-white flex flex-col justify-between h-full shadow-lg rounded-xl border border-blue-100 overflow-hidden relative">
+                      
+
+                      <div className="p-4 bg-white border-b border-gray-100 z-20">
+                          <h2 className="text-xl font-bold mb-2 text-gray-800 line-clamp-1">
+                              {user ? `Welcome back, ${user.firstName}` : 'Sign in for best experience'}
+                          </h2>
+                          <button 
+                              onClick={() => user ? navigate('/profile') : navigate('/login')}
+                              className={`w-full text-sm font-semibold py-2.5 rounded-lg shadow-sm transition-colors ${
+                                  user 
+                                  ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' 
+                                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+                              }`}
+                          >
+                              {user ? 'My Account' : 'Sign in securely'}
                           </button>
                       </div>
-                  )}
-              </div>
-            </div>
+
+
+                      <div className="flex-1 p-4 relative flex flex-col justify-center">
+                          {freshSaleData.isActive ? (
+                              <div className="cursor-pointer group h-full flex flex-col" onClick={() => navigate(`/product/${freshProduct?._id}`)}>
+                                  <div className="flex justify-between items-center mb-2">
+                                      <span className="bg-red-50 text-red-600 text-[10px] font-bold px-2 py-1 rounded border border-red-100 flex items-center gap-1 animate-pulse">
+                                          <Zap className="w-3 h-3 fill-current" /> FRESH DEAL
+                                      </span>
+                                      <div className="text-xs font-mono font-bold text-gray-600 bg-gray-100 px-2 py-1 rounded flex items-center gap-1">
+                                          <Clock className="w-3 h-3" /> {freshSaleData.timeString}
+                                      </div>
+                                  </div>
+              
+                                  <div className="relative flex-1 bg-gray-50 rounded-lg p-2 mb-2 flex items-center justify-center overflow-hidden">
+                                      <img src={freshProduct?.images?.[0]} alt="Deal" className="max-w-full h-24 object-contain group-hover:scale-110 transition-transform duration-500" />
+                                      <div className="absolute top-2 right-2 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded">
+                                          -{freshSaleData.discount}%
+                                      </div>
+                                  </div>
+
+                                  <div>
+                                      <h3 className="text-sm font-bold text-gray-800 line-clamp-1 mb-1">{freshProduct?.name}</h3>
+                                      <div className="flex items-center justify-between">
+                                          <div className="flex flex-col">
+                                              {freshProduct ? (() => {
+                                                const originalPrice = getPriceForCountry(freshProduct, selectedCountry);
+                                                const discountedAmount = originalPrice.price * (1 - freshSaleData.discount / 100);
+                                                const discountedPrice = formatConvertedPrice(discountedAmount, selectedCountry);
+                                                return (
+                                                  <>
+                                                    <span className="text-[10px] text-gray-400 line-through">Was {originalPrice.symbol}{originalPrice.price}</span>
+                                                    <span className="text-lg font-bold text-red-600 leading-none">
+                                                      {discountedPrice.symbol}{discountedPrice.price}
+                                                    </span>
+                                                  </>
+                                                );
+                                              })() : null}
+                                          </div>
+                                          <button className="bg-red-100 text-red-600 p-1.5 rounded-lg hover:bg-red-600 hover:text-white transition-colors">
+                                              <ShoppingCart className="w-4 h-4" />
+                                          </button>
+                                      </div>
+                                  </div>
+                              </div>
+                          ) : (
+                              <div className="h-full flex flex-col items-center justify-center text-center bg-gradient-to-br from-gray-50 to-blue-50 rounded-lg border border-dashed border-gray-300 p-4">
+                                  <div className="bg-white p-3 rounded-full shadow-sm mb-3">
+                                      <Megaphone className="w-6 h-6 text-blue-500" />
+                                  </div>
+                                  <h3 className="font-bold text-gray-700 mb-1">Advertise Here</h3>
+                                  <p className="text-xs text-gray-500 mb-4 px-2">
+                                      Reach thousands of customers daily. Boost your brand visibility now.
+                                  </p>
+                                  <button className="text-xs font-bold text-blue-600 border border-blue-200 bg-white px-3 py-1.5 rounded-full hover:bg-blue-50 flex items-center gap-1 transition-colors">
+                                      <Mail className="w-3 h-3" /> Contact Sales
+                                  </button>
+                              </div>
+                          )}
+                      </div>
+                    </div>
+                  </div>
+            )}
           </div>
-        )}
-      </div>
+
+      </section>
 
       {/* FEATURED PRODUCTS */}
       <section id="featured-products" className="py-8 container mx-auto px-4 relative group">

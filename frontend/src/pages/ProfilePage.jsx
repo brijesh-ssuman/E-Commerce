@@ -251,6 +251,7 @@ const ProfilePage = () => {
               {error}
             </div>
           )}
+
         </div>
 
         {isGuestMode && (
@@ -461,54 +462,6 @@ const ProfilePage = () => {
           </div>
         </div>
 
-        {/* Search History */}
-        <div className="mt-6 bg-white rounded-xl shadow-sm p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Search History</h2>
-          {profile.searchHistory && profile.searchHistory.length > 0 ? (
-            <div className="space-y-3 max-h-64 overflow-y-auto">
-              {profile.searchHistory.slice().reverse().map((search, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">{search.productName}</p>
-                    <p className="text-xs text-blue-600">Category: {search.productCategory}</p>
-                    {search.searchQuery && (
-                      <p className="text-xs text-gray-500">Searched for: "{search.searchQuery}"</p>
-                    )}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {new Date(search.searchedAt).toLocaleDateString()} {new Date(search.searchedAt).toLocaleTimeString()}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-500 text-center py-8">No search history available</p>
-          )}
-        </div>
-
-        {/* Clicked Products */}
-        <div className="mt-6 bg-white rounded-xl shadow-sm p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Recently Viewed Products</h2>
-          {profile.clickedProducts && profile.clickedProducts.length > 0 ? (
-            <div className="space-y-3 max-h-64 overflow-y-auto">
-              {profile.clickedProducts.slice().reverse().map((click, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">{click.productName}</p>
-                    {click.productCategory && (
-                      <p className="text-xs text-blue-600">Category: {click.productCategory}</p>
-                    )}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {new Date(click.clickedAt).toLocaleDateString()} {new Date(click.clickedAt).toLocaleTimeString()}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-500 text-center py-8">No product views recorded</p>
-          )}
-        </div>
       </div>
     </div>
   );

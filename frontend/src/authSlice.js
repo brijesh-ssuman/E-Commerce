@@ -74,6 +74,21 @@ export const checkAuth = createAsyncThunk(
   }
 );
 
+export const refreshUserProfile = createAsyncThunk(
+  'auth/refreshProfile',
+  async (_, { rejectWithValue }) => {
+    try {
+      const { data } = await axiosClient.get('/user/profile');
+      return data?.user;
+    } catch (error) {
+      if (error.response?.status === 401) {
+        return rejectWithValue(null);
+      }
+      return rejectWithValue(error);
+    }
+  }
+);
+
 export const logoutUser = createAsyncThunk(
   'auth/logout',
   async (_, { rejectWithValue }) => {
@@ -172,6 +187,13 @@ const authSlice = createSlice({
         state.error = action.payload?.message || 'Something went wrong';
         state.isAuthenticated = false;
         state.user = null;
+      })
+
+      // Refresh Profile (for history etc)
+      .addCase(refreshUserProfile.fulfilled, (state, action) => {
+        if (action.payload) {
+          state.user = action.payload;
+        }
       })
   
       // Logout User Cases

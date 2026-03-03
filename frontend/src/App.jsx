@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { checkAuth } from './authSlice';
@@ -19,6 +19,8 @@ import Category from './pages/CategoryPage';
 import RecomendCategoryPage from './components/RecomendCategory';
 import FeaturedProducts from './pages/FeaturedProducts';
 import AdminOrders from './pages/AdminOrders';
+import RecentHistoryPage from './pages/RecentHistoryPage';
+import SearchHistoryPage from './pages/SearchHistoryPage';
 
 function App() {
   const dispatch = useDispatch();
@@ -46,6 +48,8 @@ function App() {
               <Route path="/recomendcategory/:categoryName" element={<RecomendCategoryPage />} />   
               <Route path="/featured" element={<FeaturedProducts />} />
               <Route path="/admin/orders" element={<AdminOrders />} />
+              <Route path="/history/recent" element={<RecentHistoryPage />} />
+              <Route path="/history/search" element={<SearchHistoryPage />} />
             </Routes>
       </Router>
   );

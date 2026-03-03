@@ -9,6 +9,7 @@ import {
 import axiosClient from '../utils/axiosClient';
 import { addToCart } from '../cartSlice';
 import { fetchProductById } from '../productSlice';
+import { updateUser } from '../authSlice';
 import { getPriceForCountry, getCurrencyForCountry, formatConvertedPrice } from '../utils/pricing';
 import { ProductDetailsShimmer } from '../components/Shimmer';
 
@@ -37,6 +38,36 @@ const ProductPage = () => {
       fetchFreshSale();
     }
   }, [id, dispatch]);
+
+  useEffect(() => {
+    if (user && currentProduct && !user._id?.startsWith?.('guest')) {
+      const trackView = async () => {
+        try {
+          await axiosClient.post('/user/clickedProduct', {
+            productId: currentProduct._id,
+            productName: currentProduct.name,
+            productCategory: currentProduct.category
+          });
+          const pid = currentProduct._id;
+          const existing = (user.clickedProducts || []).filter(
+            p => String(p.productId?._id ?? p.productId) !== String(pid)
+          );
+          dispatch(updateUser({
+            ...user,
+            clickedProducts: [{
+              productId: pid,
+              clickedAt: new Date(),
+              productName: currentProduct.name,
+              productCategory: currentProduct.category
+            }, ...existing]
+          }));
+        } catch (err) {
+          console.error('Failed to track product view:', err);
+        }
+      };
+      trackView();
+    }
+  }, [currentProduct?._id, user?._id]);
 
   const fetchReviews = async () => {
     try {

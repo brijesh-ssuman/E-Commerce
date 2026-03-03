@@ -21,16 +21,11 @@ const Register = async (req,res)=>{
     
     const user =  await User.create(req.body);
     const token =  jwt.sign({_id:user._id , emailId:emailId, role:user.role},process.env.JWT_KEY,{expiresIn: 60*60});
-    const reply = {
-        firstName: user.firstName,
-        emailId: user.emailId,
-        _id: user._id,
-        role: user.role,
-    }
+    const fullUser = await User.findById(user._id).select('-password');
     
      res.cookie('token',token,{maxAge: 60*60*1000});
      res.status(201).json({
-        user:reply,
+        user: fullUser,
         message:"Login Successfully"
     })
     }
@@ -62,16 +57,12 @@ const Login = async (req,res)=>{
             throw new Error("Invalid Username and Password")
 
         const token = jwt.sign({_id:user._id,emailId:user.emailId, role:user.role},process.env.JWT_KEY,{expiresIn:60*60})
-        const reply = {
-            firstName:user.firstName,
-            emailId:user.emailId,
-            _id:user._id,
-            role:user.role
-        }
+        // populate histories optionally if needed later
+        const fullUser = await User.findById(user._id).select('-password');
         res.cookie("token",token,{maxAge:60*60*1000})
 
         res.json({
-            user:reply,
+            user: fullUser,
             message:"Login Successfully"
         })
     } catch (error) {
@@ -111,19 +102,18 @@ const deleteProfile = async (req,res) => {
 }
 
 // User Presence 
-const checkUser = (req,res) => {
-    
-    const reply = {
-        _id:req.result._id,
-        firstName:req.result.firstName,
-        emailId:req.result.emailId,
-        role:req.result.role
+const checkUser = async (req,res) => {
+    try {
+        const userId = req.result._id;
+        const user = await User.findById(userId)
+            .select('-password');
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        res.json({ user, message: 'Valid User' });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
     }
-
-    res.json({
-        user:reply,
-        message:"Valid User"
-    })
 }
 
 // User Profile 
@@ -287,7 +277,9 @@ const addClickedProduct = async (req, res) => {
             clickedAt: new Date()
         };
 
-
+        user.clickedProducts = user.clickedProducts.filter(
+            p => p.productId && p.productId.toString() !== productId.toString()
+        );
         user.clickedProducts.unshift(newClick);
         if (user.clickedProducts.length > 100) {
             user.clickedProducts = user.clickedProducts.slice(0, 100);

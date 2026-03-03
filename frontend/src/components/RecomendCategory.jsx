@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router';
+import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ShoppingBag, Star, Filter, X, Check, Loader2, ChevronLeft 
 } from 'lucide-react';
