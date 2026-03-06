@@ -148,7 +148,7 @@ const Homepage = () => {
   const featuredScrollRef = useRef(null);
   const [recentClickedProducts, setRecentClickedProducts] = useState([]);
   const [searchHistoryProducts, setSearchHistoryProducts] = useState([]);
-  const [randomCategory, setRandomCategory] = useState('');
+  // randomCategory state removed; we'll use defaultCards for unauthenticated view and random selection when logged in
 
   const categoriesList = ['electronics','clothing','books','home','sports','beauty','toys','automotive'];
 
@@ -222,10 +222,7 @@ const Homepage = () => {
     }
   }, [user, allProducts]);
 
-  useEffect(() => {
-    const randomIdx = Math.floor(Math.random() * categoriesList.length);
-    setRandomCategory(categoriesList[randomIdx]);
-  }, []);
+  // randomCategory effect removed - we will pick from defaultCards when needed
 
   useEffect(() => {
     dispatch(fetchAllProducts());
@@ -386,9 +383,21 @@ const Homepage = () => {
   const displayElectronics = electronics.length ? electronics : allProducts.slice(0, 4);
   const displayHome = home.length ? home : allProducts.slice(4, 8);
   const displayFashion = fashion.length ? fashion : allProducts.slice(8, 9);
-  const randomCategoryProducts = randomCategory 
-    ? allProducts.filter(p => p.category?.toLowerCase().includes(randomCategory.toLowerCase()))
-    : [];
+
+  // default cards used when user is not logged in or to pick a random card when logged in
+  const defaultCards = [
+    { title: "Electronics & Gadgets", products: displayElectronics, categorySlug: "electronics", type: "grid" },
+    { title: "Home Appliances", products: displayHome, categorySlug: "home", type: "single" },
+    { title: "Fashion Trends", products: displayFashion, categorySlug: "clothing", type: "single" }
+  ];
+
+  const [randomDefaultIdx, setRandomDefaultIdx] = useState(() => Math.floor(Math.random() * defaultCards.length));
+  useEffect(() => {
+    if (user) {
+      // select a random default card whenever login state changes
+      setRandomDefaultIdx(Math.floor(Math.random() * defaultCards.length));
+    }
+  }, [user]);
 
   return (
     <div className="min-h-screen bg-blue-50/50 relative">
@@ -437,81 +446,98 @@ const Homepage = () => {
               <QuadCardsShimmer />
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {/* Recent History Card */}
-                    <div className="bg-white p-4 flex flex-col justify-between h-full z-10 shadow-lg rounded-xl cursor-pointer hover:shadow-xl transition-shadow border border-blue-100">
-                      <h2 className="text-xl font-bold mb-4 text-gray-800 line-clamp-2 h-14">Recent History</h2>
-                      <div className="flex-grow">
-                        {recentClickedProducts.length > 0 ? (
-                          <div className="grid grid-cols-2 gap-2 h-full">
-                            {recentClickedProducts.slice(0, 4).map((item, idx) => (
-                              <div key={idx} onClick={() => handleProductClick(item)}>
-                                <img 
-                                  src={item.images?.[0]} 
-                                  alt={item.name} 
-                                  className="w-full h-24 object-contain mb-1 p-1 bg-gray-50 rounded-lg"
-                                />
+                    {user && (recentClickedProducts.length > 0 || searchHistoryProducts.length > 0) ? (
+                      <>
+                        {/* Recent History Card */}
+                        <div className="bg-white p-4 flex flex-col justify-between h-full z-10 shadow-lg rounded-xl cursor-pointer hover:shadow-xl transition-shadow border border-blue-100">
+                          <h2 className="text-xl font-bold mb-4 text-gray-800 line-clamp-2 h-14">Recent History</h2>
+                          <div className="flex-grow">
+                            {recentClickedProducts.length > 0 ? (
+                              <div className="grid grid-cols-2 gap-2 h-full">
+                                {recentClickedProducts.slice(0, 4).map((item, idx) => (
+                                  <div key={idx} onClick={() => handleProductClick(item)}>
+                                    <img 
+                                      src={item.images?.[0]} 
+                                      alt={item.name} 
+                                      className="w-full h-24 object-contain mb-1 p-1 bg-gray-50 rounded-lg"
+                                    />
+                                  </div>
+                                ))}
                               </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="h-full flex items-center justify-center text-gray-400">
-                            <p className="text-sm">No history yet</p>
-                          </div>
-                        )}
-                      </div>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate('/history/recent');
-                        }}
-                        className="text-sm text-left text-blue-600 font-semibold hover:text-blue-800 hover:underline mt-4 block"
-                      >
-                        View all History &rarr;
-                      </button>
-                    </div>
-
-                    {/* Search History Card */}
-                    <div className="bg-white p-4 flex flex-col justify-between h-full z-10 shadow-lg rounded-xl cursor-pointer hover:shadow-xl transition-shadow border border-blue-100">
-                      <h2 className="text-xl font-bold mb-4 text-gray-800 line-clamp-2 h-14">Search History</h2>
-                      <div className="flex-grow">
-                        {searchHistoryProducts.length > 0 ? (
-                          <div className="grid grid-cols-2 gap-2 h-full">
-                            {searchHistoryProducts.slice(0, 4).map((item, idx) => (
-                              <div key={idx} onClick={() => handleProductClick(item)}>
-                                <img 
-                                  src={item.images?.[0]} 
-                                  alt={item.name} 
-                                  className="w-full h-24 object-contain mb-1 p-1 bg-gray-50 rounded-lg"
-                                />
+                            ) : (
+                              <div className="h-full flex items-center justify-center text-gray-400">
+                                <p className="text-sm">No history yet</p>
                               </div>
-                            ))}
+                            )}
                           </div>
-                        ) : (
-                          <div className="h-full flex items-center justify-center text-gray-400">
-                            <p className="text-sm">No search history</p>
-                          </div>
-                        )}
-                      </div>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate('/history/search');
-                        }}
-                        className="text-sm text-left text-blue-600 font-semibold hover:text-blue-800 hover:underline mt-4 block"
-                      >
-                        View History &rarr;
-                      </button>
-                    </div>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate('/history/recent');
+                            }}
+                            className="text-sm text-left text-blue-600 font-semibold hover:text-blue-800 hover:underline mt-4 block"
+                          >
+                            View all History &rarr;
+                          </button>
+                        </div>
 
-                    {/* Random Category Card */}
-                    <CategoryCard 
-                      title={randomCategory.charAt(0).toUpperCase() + randomCategory.slice(1)} 
-                      products={randomCategoryProducts.slice(0, 4)} 
-                      categorySlug={randomCategory} 
-                      type="grid" 
-                      navigate={navigate} 
-                      handleProductClick={handleProductClick}
-                    />
+                        {/* Search History Card */}
+                        <div className="bg-white p-4 flex flex-col justify-between h-full z-10 shadow-lg rounded-xl cursor-pointer hover:shadow-xl transition-shadow border border-blue-100">
+                          <h2 className="text-xl font-bold mb-4 text-gray-800 line-clamp-2 h-14">Search History</h2>
+                          <div className="flex-grow">
+                            {searchHistoryProducts.length > 0 ? (
+                              <div className="grid grid-cols-2 gap-2 h-full">
+                                {searchHistoryProducts.slice(0, 4).map((item, idx) => (
+                                  <div key={idx} onClick={() => handleProductClick(item)}>
+                                    <img 
+                                      src={item.images?.[0]} 
+                                      alt={item.name} 
+                                      className="w-full h-24 object-contain mb-1 p-1 bg-gray-50 rounded-lg"
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="h-full flex items-center justify-center text-gray-400">
+                                <p className="text-sm">No search history</p>
+                              </div>
+                            )}
+                          </div>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate('/history/search');
+                            }}
+                            className="text-sm text-left text-blue-600 font-semibold hover:text-blue-800 hover:underline mt-4 block"
+                          >
+                            View History &rarr;
+                          </button>
+                        </div>
+
+                        {/* Random Category Card - pick one of predefined default cards */}
+                        <CategoryCard
+                          title={defaultCards[randomDefaultIdx].title}
+                          products={defaultCards[randomDefaultIdx].products.slice(0,4)}
+                          categorySlug={defaultCards[randomDefaultIdx].categorySlug}
+                          type={defaultCards[randomDefaultIdx].type}
+                          navigate={navigate}
+                          handleProductClick={handleProductClick}
+                        />
+                      </>
+                    ) : (
+                      
+                      defaultCards.map((card, idx) => (
+                        <CategoryCard
+                          key={idx}
+                          title={card.title}
+                          products={card.products.slice(0,4)}
+                          categorySlug={card.categorySlug}
+                          type={card.type}
+                          navigate={navigate}
+                          handleProductClick={handleProductClick}
+                        />
+                      ))
+                    )}
                     
                     {/* SPONSORSHIP */}
                     <div className="bg-white flex flex-col justify-between h-full shadow-lg rounded-xl border border-blue-100 overflow-hidden relative">
