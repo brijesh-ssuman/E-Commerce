@@ -148,7 +148,6 @@ const Homepage = () => {
   const featuredScrollRef = useRef(null);
   const [recentClickedProducts, setRecentClickedProducts] = useState([]);
   const [searchHistoryProducts, setSearchHistoryProducts] = useState([]);
-  // randomCategory state removed; we'll use defaultCards for unauthenticated view and random selection when logged in
 
   const categoriesList = ['electronics','clothing','books','home','sports','beauty','toys','automotive'];
 

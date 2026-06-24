@@ -234,9 +234,6 @@ const Navbar = () => {
             </div>
           </div>
 
-          {/* Login Buttons */}
-
-          {/* Login Buttons */}
         <div className="flex items-center gap-2 md:gap-5">
           <div className="relative" ref={dropdownRef}>
             {user ? (
